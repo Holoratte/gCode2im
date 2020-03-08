@@ -23,10 +23,10 @@ def gcode2dict(filename):
         thisGcodeLine= {}
         lineList = re.split(separator,line.rstrip('\n '))
         for i in range(len(lineList)):
-            if lineList[i] == (";" or "("):
+            if lineList[i] == (";" or "(" or ""):
                 break
             try:
-                if lineList[i] in separator and lineList[i] != "" and lineList[i] != ";": thisGcodeLine[lineList[i]] = float(lineList[i+1].rstrip('\n '))
+                if lineList[i] in separator: thisGcodeLine[lineList[i]] = float(lineList[i+1].rstrip('\n '))
             except:
                 pass
         gCodeDict.append(thisGcodeLine)
