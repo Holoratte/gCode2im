@@ -149,4 +149,4 @@ if __name__ == '__main__':
         filename, file_extension = os.path.splitext(filename)
         filename = filename + ".png"
         print filename
-##        image.save(filename)
+        image.save(filename)
