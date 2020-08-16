@@ -4,7 +4,7 @@
 #
 # Author:      Holoratte
 #
-# Created:     08/03/2020
+# Created:     16/08/2020
 # Copyright:   (c) Holoratte 2020
 # Licence:     <GPLv3>
 #-------------------------------------------------------------------------------
@@ -15,6 +15,8 @@ import PIL
 from PIL import ImageDraw, Image, ImageOps
 import math
 import os
+import g1tog23NoGui as g1tog23
+import sys
 
 def gcode2dict(filename):
     thisGcodeLine= {}
@@ -33,7 +35,7 @@ def gcode2dict(filename):
         gCodeDict.append(thisGcodeLine)
     return gCodeDict
 
-def replace(filename, gCodeDict, GValue, axis, searchValue, newValue):
+def replace(filename, outputfilename, gCodeDict, GValue, axis, searchValue, newValue):
     posX, posY,posZ,i,j,k,g = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0
     a_list = ("M","G", "X", "Y", "Z", "I", "J", "K", "F", "S", "P")
 
@@ -46,9 +48,8 @@ def replace(filename, gCodeDict, GValue, axis, searchValue, newValue):
             if (l.get('G', None) == GValue) or (g == GValue) :
                 l[axis]= newValue
 
-        filename, file_extension = os.path.splitext(filename)
-        filename = filename + "_" + str(GValue)+str(axis)+str(newValue) + ".nc"
-        with open(filename,"w") as f:
+
+        with open(outputfilename,"w") as f:
 
             for l in  gCodeDict:
                 lsorted =[(key, l[key]) for key in a_list if key in l]
@@ -59,7 +60,6 @@ def replace(filename, gCodeDict, GValue, axis, searchValue, newValue):
 
 
 def dict2image(gCodeDict, draw):
-##    print gCodeDict
     posX, posY,posZ,i,j,k,g = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0
     scaler = 1.0
     seqX = [x.get('X', 0) for x in gCodeDict]
@@ -78,13 +78,13 @@ def dict2image(gCodeDict, draw):
     offsetZ = 0.0-minZ
     dictScaler = ["X","Y","Z","I","J","K"]
     colorZ =0
-##    print minX, maxX, minY, maxY
     if maxX - minX == 0: maxX= 1e-200
     if maxY - minY == 0: maxY= 1e-200
     scaler = min(sizeX/(maxX - minX),sizeY/(maxY - minY))
     if maxZ-minZ == 0: scalerZcolor = 1
-    elif maxZ-minZ > 0: scalerZcolor = 255/(minZ-maxZ)/scaler															 
+    elif maxZ-minZ > 0: scalerZcolor = 255/(minZ-maxZ)/scaler
     else: scalerZcolor = 255/(maxZ-minZ)/scaler
+    print scalerZcolor, maxZ,minZ
 
     for l in  gCodeDict:
         for key, value in l.iteritems():
@@ -106,8 +106,6 @@ def dict2image(gCodeDict, draw):
             if l.get('K', None) == None: l["K"]= k
             if l.get('G', None) == None: l["G"]= g
             colorZ = int(l.get("Z")*scalerZcolor)
-##            colorZ =0
-##            print colorZ
             if l.get('G', None) == 1:
                 draw.line([posX, posY,l.get('X'),l.get('Y')],fill=colorZ, width=linewidth)
             elif l.get('G', None) == 3:
@@ -129,7 +127,6 @@ def dict2image(gCodeDict, draw):
             elif l.get('G', None) == 2:
                 centerX = posX+l.get("I") if l.get("I") != None else posX+i
                 centerY = posY+l.get("J") if l.get("J") != None else posX+j
-##                print centerX,centerY, "hallo"
                 if (posX-centerX) == 0:
                     centerX+=1e-200
                 startAngle = math.degrees(math.atan2((posY-centerY),(posX-centerX)))
@@ -144,7 +141,6 @@ def dict2image(gCodeDict, draw):
                 else:
                     radius = math.sqrt(l.get("I")**2+l.get("J")**2)
                 draw.arc([centerX-radius, centerY-radius, centerX+radius, centerY+radius], stopAngle, startAngle, fill=colorZ, width=linewidth)
-    ##        else: print l
             if l.get('X', None) != None: posX = l.get('X')
             if l.get('Y', None) != None: posY = l.get('Y')
             if l.get('Z', None) != None: posZ = l.get('Z')
@@ -152,7 +148,6 @@ def dict2image(gCodeDict, draw):
             if l.get('J', None) != None: j= l.get("J")
             if l.get('K', None) != None: k= l.get("K")
             if l.get('G', None) != None: g = l.get('G')
-##            print posX, posY,posZ,i,j,k,g
 
 ##    return image
 if __name__ == '__main__':
@@ -168,14 +163,33 @@ if __name__ == '__main__':
         filetypes = (("nc-Files",".nc .cnc"),("all files","*.*")));
     root.destroy()
     if filename != "":
+        with open(filename, 'r') as file:
+            input_line_count = sum(1 for line in file)
+        print input_line_count
         linewidth = 1
         gdict = gcode2dict(filename)
         dict2image(gcode2dict(filename),draw)
         image = image.transpose(PIL.Image.FLIP_TOP_BOTTOM)
         image.show()
-        filename, file_extension = os.path.splitext(filename)
-        filename = filename + ".png"
+        filenameNoExt, file_extension = os.path.splitext(filename)
+        filenamePNG = filenameNoExt + ".png"
         print filename
-        image.save(filename)
-        replace(filename,gdict,1,"Z","*",0.05)
+        image.save(filenamePNG)
+
+        outputfilename = filenameNoExt + "_replaced" +".nc"
+        replace(filename, outputfilename, gdict,1,"Z","*",-0.05)
+        dict2image(gcode2dict(outputfilename),draw)
+        image.show()
+
+        SIMPLYFYGCODE = g1tog23.Gcode()
+        SIMPLYFYGCODE.load(outputfilename,filenameNoExt +"_simplified" + ".nc" )
+##        SIMPLYFYGCODE.load(filename,filenameNoExt +"_simplified" + ".nc" )
+
+        image = Image.new(mode = "L", size = (sizeX, sizeY),color="white")
+        draw = ImageDraw.Draw(image)
+        dict2image(gcode2dict(filenameNoExt +"_simplified" + ".nc"),draw)
+        image = image.transpose(PIL.Image.FLIP_TOP_BOTTOM)
+        image.show()
+        image.save(filenameNoExt +"_simplified" + ".png")
+
 
