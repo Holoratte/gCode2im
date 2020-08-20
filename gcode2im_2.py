@@ -83,7 +83,7 @@ def dict2image(gCodeDict, draw):
     if maxY - minY == 0: maxY= 1e-200
     scaler = min(sizeX/(maxX - minX),sizeY/(maxY - minY))
     if maxZ-minZ == 0: scalerZcolor = 1
-    elif maxZ-minZ > 0: scalerZcolor = 255/(minZ-maxZ)/scaler															 
+    elif maxZ-minZ > 0: scalerZcolor = 255/(minZ-maxZ)/scaler
     else: scalerZcolor = 255/(maxZ-minZ)/scaler
 
     for l in  gCodeDict:
@@ -177,5 +177,5 @@ if __name__ == '__main__':
         filename = filename + ".png"
         print filename
         image.save(filename)
-        replace(filename,gdict,1,"Z","*",0.05)
+##        replace(filename,gdict,1,"Z","*",0.05)
 

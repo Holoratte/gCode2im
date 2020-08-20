@@ -22,14 +22,15 @@ def gcode2dict(filename):
     thisGcodeLine= {}
     gCodeDict =[]
     separator = '(M|G|X|Y|Z|I|J|K|F|S|P|;)'
+    regex = re.compile(separator,flags= re.IGNORECASE)
     for line in open(filename,"rb"):
         thisGcodeLine= {}
-        lineList = re.split(separator,line.rstrip('\n '))
+        lineList = regex.split(line.rstrip('\n ').upper())
         for i in range(len(lineList)):
             if lineList[i] == (";" or "(" or ""):
                 break
             try:
-                if lineList[i] in separator: thisGcodeLine[lineList[i]] = float(lineList[i+1].rstrip('\n '))
+                if lineList[i] in separator: thisGcodeLine[lineList[i].upper()] = float(lineList[i+1].rstrip('\n '))
             except:
                 pass
         gCodeDict.append(thisGcodeLine)
@@ -82,8 +83,8 @@ def dict2image(gCodeDict, draw):
     if maxY - minY == 0: maxY= 1e-200
     scaler = min(sizeX/(maxX - minX),sizeY/(maxY - minY))
     if maxZ-minZ == 0: scalerZcolor = 1
-    elif maxZ-minZ > 0: scalerZcolor = 255/(minZ-maxZ)/scaler
-    else: scalerZcolor = 255/(maxZ-minZ)/scaler
+    elif maxZ-minZ > 0: scalerZcolor = 255/(maxZ-minZ)/scaler
+    else: scalerZcolor = 255/(minZ-maxZ)/scaler
     print scalerZcolor, maxZ,minZ
 
     for l in  gCodeDict:
@@ -121,12 +122,13 @@ def dict2image(gCodeDict, draw):
                 if (l.get("Y")-centerY) == 0:
                     centerY+=1e-200
                 stopAngle = math.degrees(math.atan2((l.get("Y")-centerY),(l.get("X")-centerX)))
-                if startAngle == stopAngle: stopAngle += 360
                 radius = math.sqrt(l.get("I")**2+l.get("J")**2)
+                if startAngle == stopAngle:
+                    stopAngle += 360
                 draw.arc([centerX-radius, centerY-radius, centerX+radius, centerY+radius], startAngle, stopAngle, fill=colorZ, width=linewidth)
             elif l.get('G', None) == 2:
-                centerX = posX+l.get("I") if l.get("I") != None else posX+i
-                centerY = posY+l.get("J") if l.get("J") != None else posX+j
+                centerX = posX+l.get("I")
+                centerY = posY+l.get("J")
                 if (posX-centerX) == 0:
                     centerX+=1e-200
                 startAngle = math.degrees(math.atan2((posY-centerY),(posX-centerX)))
@@ -134,13 +136,9 @@ def dict2image(gCodeDict, draw):
                     centerX+=1e-200
                 stopAngle = math.degrees(math.atan2((l.get("Y")-centerY),(l.get("X")-centerX)))
                 if startAngle == stopAngle: stopAngle += 360
-                if l.get("I") == None and l.get("J") != None:
-                    radius = math.sqrt(i**2+l.get("J")**2)
-                elif l.get("I") != None and l.get("J") == None:
-                    radius = math.sqrt(l.get("I")**2+j**2)
-                else:
-                    radius = math.sqrt(l.get("I")**2+l.get("J")**2)
+                radius = math.sqrt(l.get("I")**2+l.get("J")**2)
                 draw.arc([centerX-radius, centerY-radius, centerX+radius, centerY+radius], stopAngle, startAngle, fill=colorZ, width=linewidth)
+
             if l.get('X', None) != None: posX = l.get('X')
             if l.get('Y', None) != None: posY = l.get('Y')
             if l.get('Z', None) != None: posZ = l.get('Z')
@@ -153,6 +151,8 @@ def dict2image(gCodeDict, draw):
 if __name__ == '__main__':
     sizeX = 7000
     sizeY = 4000
+    linewidth = 1
+
     image = Image.new(mode = "L", size = (sizeX, sizeY),color="white")
     draw = ImageDraw.Draw(image)
 
@@ -166,7 +166,7 @@ if __name__ == '__main__':
         with open(filename, 'r') as file:
             input_line_count = sum(1 for line in file)
         print input_line_count
-        linewidth = 1
+
         gdict = gcode2dict(filename)
         dict2image(gcode2dict(filename),draw)
         image = image.transpose(PIL.Image.FLIP_TOP_BOTTOM)

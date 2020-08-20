@@ -70,8 +70,10 @@ class Gcode(object):
         if os.path.isfile(input_file):
             self._fileSize = os.stat(input_file).st_size
         self.output_file = output_file
-        with open(input_file, 'r') as file:
-            self.input_line_count = sum(1 for line in file)
+        with open(self.output_file, 'w') as f:
+            f.write("simplyfied using Dougles-Peukert algorithm")
+        with open(input_file, 'r') as f:
+            self.input_line_count = sum(1 for line in f)
         gcodeFile = open(input_file, 'r')
         print"File loaded"
         self._load(gcodeFile)
